@@ -1,0 +1,34 @@
+name: Build and deploy the application to Koyeb
+
+on:
+  schedule:
+    - cron: '20 7 * * *'
+  push:
+    branches:
+      - '*'
+
+jobs:
+  deploy:
+    concurrency:
+      group: "${{ github.ref_name }}"
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install and configure the Koyeb CLI
+        uses: koyeb-community/install-koyeb-cli@v2
+        with:
+          api_token: "${{ secrets.KOYEB_EXAMPLES_APPS_TOKEN }}"
+
+      - name: Create application secret
+        uses: koyeb/action-git-deploy/secret@v1
+        with:
+          secret-name: PRISMA_DATABASE_URL
+          secret-value: "${{ secrets.POSTGRES_URL }}"
+
+      - name: Build and deploy the application
+        uses: koyeb/action-git-deploy@v1
+        with:
+          app-name: prisma-${{ github.ref_name }}
+          service-env: "DATABASE_URL=@PRISMA_DATABASE_URL"
+          service-ports: "3000:http"
+          service-routes: "/:3000"
